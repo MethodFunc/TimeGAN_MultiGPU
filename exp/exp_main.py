@@ -111,9 +111,7 @@ class Experience(ExpBase):
                     print(f' {step:6,.0f} | d_loss: {step_d_loss:6.4f} | g_loss_u: {step_g_loss_u:6.4f} | '
                           f'g_loss_s: {step_g_loss_s:6.4f} | g_loss_v: {step_g_loss_v:6.4f} | e_loss_t0: {step_e_loss_t0:6.4f}')
 
-        # print("#4. Save Synthetic model")
         self.synthetic_model = synthetic_model
-        # synthetic_model.save('synthetic_data_10m')
 
     def save_model(self, model_nane, path="./model"):
         if not Path(path).exists():
@@ -131,7 +129,7 @@ class Experience(ExpBase):
         generated_data = []
         for i in tqdm(range(int(self.n_series / self.config.train["batch_size"]))):
             Z_ = next(random_series)
-            d = self.synthetic_data(Z_)
+            d = self.synthetic_model(Z_)
             generated_data.append(d)
 
         generated_data = np.array(np.vstack(generated_data))
