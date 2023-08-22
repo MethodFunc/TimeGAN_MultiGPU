@@ -122,6 +122,9 @@ class Experience(ExpBase):
         self.synthetic_model = synthetic_model
 
     def save_model(self, model_nane, path="./model"):
+        if not hasattr(self, "synthetic_model"):
+            raise "Should be train_model execute first."
+
         if not Path(path).exists():
             Path(path).mkdir(parents=True)
         print("Save Synthetic model")
@@ -154,8 +157,11 @@ class Experience(ExpBase):
         print("create comparison 2. plot")
         self.comparison_plot2(t_data, generated_data)
 
-        print("create base windspeed plot")
-        self.base_ws_plot(t_data, generated_data)
+        try:
+            print("create base windspeed plot")
+            self.base_ws_plot(t_data, generated_data)
+        except:
+            pass
 
         print("verification. PCA & tsne plot")
         self.verification(generated_data)
