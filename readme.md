@@ -20,4 +20,4 @@
 - 설정은 setting.yaml에서 하면 됩니다. (추후 arguments로 변경 예정)
 
 ## 3. Bug
-- os.environ을 사용하지 않으면 싱글 그래픽카드 사용 불가 버그(fixed)
+- os.environ을 사용하지 않으면 단일 그래픽카드 활성화 불가(모든 그래픽카드 활성화) - fixed
