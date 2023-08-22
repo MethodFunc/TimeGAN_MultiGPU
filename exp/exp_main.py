@@ -25,11 +25,11 @@ class Experience(ExpBase):
         super().__init__(data=data, config=config)
         self.global_batch_size = None
         self.strategy = None
+        self.local_batch_szie = config.train["batch_size"]
 
+        self.cuda_setting()
         self.model = TimeGAN(config)
 
-        self.local_batch_szie = config.train["batch_size"]
-        self.cuda_setting()
 
     def cuda_setting(self):
         num_gpus = len(tf.config.list_physical_devices('GPU'))
@@ -46,9 +46,17 @@ class Experience(ExpBase):
                 self.global_batch_size = self.local_batch_szie * num_gpus
             else:
                 gpu_num = self.config.gpu_num
-                self.strategy = tf.distribute.OneDeviceStrategy(f"GPU:{gpu_num}")
-                physical_devices = tf.config.list_physical_devices('GPU')
-                tf.config.experimental.set_memory_growth(physical_devices[gpu_num], enable=True)
+
+                physical_devices = tf.config.experimental.list_physical_devices('GPU')
+                if physical_devices:
+                    try:
+                        tf.config.experimental.set_visible_devices(physical_devices[gpu_num], "GPU")
+                        tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+                    except Exception as err:
+                        print(f"passed: {err}")
+                        pass
+
+                self.strategy = tf.distribute.OneDeviceStrategy(f"GPU:0")
                 self.global_batch_size = self.local_batch_szie
         else:
             self.strategy = tf.distribute.OneDeviceStrategy("CPU:0")
@@ -188,14 +196,15 @@ class Experience(ExpBase):
         plt.show()
 
     def base_ws_plot(self, t_data, generated_data):
-        fig, ax = plt.subplots(nrows=2, ncols=3, figsize=(32, 18))
+        fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(32, 18))
         axes = ax.flatten()
 
         for i in range(1, len(self.raw_data.columns)):
-            axes[i - 1].scatter(t_data[::self.config.train["window_size"], :, 0].ravel(), t_data[::24, :, i].ravel(),
+            axes[i - 1].scatter(t_data[::self.config.train["window_size"], :, 0].ravel(),
+                                t_data[::self.config.train["window_size"], :, i].ravel(),
                                 label="True")
             axes[i - 1].scatter(generated_data[::self.config.train["window_size"], :, 0].ravel(),
-                                generated_data[::24, :, i].ravel(), label="TimeGAN")
+                                generated_data[::self.config.train["window_size"], :, i].ravel(), label="TimeGAN")
             axes[i - 1].set_title(self.raw_data.columns[i])
             axes[i - 1].legend()
 
