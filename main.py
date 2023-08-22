@@ -25,4 +25,4 @@ if __name__ == "__main__":
     print("model test start")
     exp.test_model()
 
-    exp.save_model("wind_generator_10s")
+    exp.save_model("synthetic_data_10sec")
