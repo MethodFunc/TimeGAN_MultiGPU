@@ -26,11 +26,6 @@ class Experience(ExpBase):
         self.global_batch_size = None
         self.strategy = None
 
-        self.X = tf.keras.layers.Input(shape=(self.config.train["window_size"], self.config.seq_length),
-                                       name="RealData")
-        self.Z = tf.keras.layers.Input(shape=(self.config.train["window_size"], self.config.seq_length),
-                                       name="RandomData")
-
         self.model = TimeGAN(config)
 
         self.local_batch_szie = config.train["batch_size"]
@@ -60,7 +55,6 @@ class Experience(ExpBase):
             self.global_batch_size = self.local_batch_szie
 
     def train_model(self):
-
         real_series = self.real_dataset(self.data, self.config)
         random_series = self.randam_dataset()
 
