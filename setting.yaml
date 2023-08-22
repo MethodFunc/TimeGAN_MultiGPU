@@ -8,9 +8,6 @@ preprocess:
   second: 0
   minute: 10
 
-generator:
-  blade: 42.2
-
 layers:
   type: gru
   n_layers: 4
