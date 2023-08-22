@@ -130,7 +130,7 @@ class Experience(ExpBase):
 
     def test_model(self):
         random_series = self.randam_dataset()
-        if not hasattr(self, "synthetic_data"):
+        if not hasattr(self, "synthetic_model"):
             raise "Should be train_model execute first."
 
         print("Generate data")
