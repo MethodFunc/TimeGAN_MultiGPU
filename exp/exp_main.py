@@ -4,12 +4,12 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 
 import numpy as np
-from models import create_layers
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from exp.exp_base import ExpBase
+from models import TimeGAN
 
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
@@ -31,7 +31,7 @@ class Experience(ExpBase):
         self.Z = tf.keras.layers.Input(shape=(self.config.train["window_size"], self.config.seq_length),
                                        name="RandomData")
 
-        self.embedder, self.recovery, self.generator, self.discriminator, self.supervisor = create_layers(config)
+        self.model = TimeGAN(config)
 
         self.local_batch_szie = config.train["batch_size"]
         self.cuda_setting()
@@ -59,76 +59,32 @@ class Experience(ExpBase):
             self.strategy = tf.distribute.OneDeviceStrategy("CPU:0")
             self.global_batch_size = self.local_batch_szie
 
-
-    def create_autoencoder(self):
-        H = self.embedder(self.X)
-        X_tilde = self.recovery(H)
-
-        return tf.keras.models.Model(inputs=self.X, outputs=X_tilde)
-
-    def create_adversarial_supervised(self):
-
-        E_hat = self.generator(self.Z)
-        H_hat = self.supervisor(E_hat)
-        Y_fake = self.discriminator(H_hat)
-
-        # set adversarial supervised
-        adversarial_supervised = tf.keras.models.Model(inputs=self.Z,
-                                                       outputs=Y_fake,
-                                                       name='AdversarialNetSupervised')
-
-        return adversarial_supervised
-
-    def create_adversarial_emb(self):
-        E_hat = self.generator(self.Z)
-        Y_fake_e = self.discriminator(E_hat)
-        adversarial_emb = tf.keras.models.Model(inputs=self.Z,
-                                                outputs=Y_fake_e,
-                                                name='AdversarialNet')
-
-        return adversarial_emb
-
-    def create_discriminator_model(self):
-        H = self.embedder(self.X)
-        Y_real = self.discriminator(H)
-        discriminator_model = tf.keras.models.Model(inputs=self.X,
-                                                    outputs=Y_real,
-                                                    name='DiscriminatorReal')
-
-        return discriminator_model
-
-    def create_synthetic_model(self):
-        E_hat = self.generator(self.Z)
-        H_hat = self.supervisor(E_hat)
-        X_hat = self.recovery(H_hat)
-        synthetic_data = tf.keras.models.Model(inputs=self.Z, outputs=X_hat, name="SyntheticData")
-
-        return synthetic_data
-
     def train_model(self):
+
         real_series = self.real_dataset(self.data, self.config)
         random_series = self.randam_dataset()
 
         with self.strategy.scope():
+            self.embedder, self.recovery, self.generator, self.discriminator, self.supervisor = self.model.get_basic_model()
+
             print("#1. Autoencoder Train")
-            autoencoder = self.create_autoencoder()
+            autoencoder = self.model.create_autoencoder()
             for step in tqdm(range(self.config.train["train_step"])):
                 X_ = next(real_series)
-                step_e_loss_t0 = self.autoencoder_step(self.strategy, autoencoder, self.embedder, self.recovery, self.global_batch_size, X_)
-                # print(f" {step_e_loss_t0:.3f}")
+                step_e_loss_t0 = self.autoencoder_step(self.strategy, autoencoder, self.embedder, self.recovery,
+                                                       self.global_batch_size, X_)
 
             print("#2. Supervisor Train")
             for step in tqdm(range(self.config.train["train_step"])):
                 X_ = next(real_series)
-                step_g_loss_s = self.supervisor_step(self.strategy, self.embedder, self.supervisor, self.global_batch_size, X_)
-                # print(f" {step_g_loss_s}")
-
+                step_g_loss_s = self.supervisor_step(self.strategy, self.embedder, self.supervisor,
+                                                     self.global_batch_size, X_)
 
             print("Create Other Model")
-            adversarial_supervised = self.create_adversarial_supervised()
-            adversarial_emb = self.create_adversarial_emb()
-            synthetic_model = self.create_synthetic_model()
-            discriminator_model = self.create_discriminator_model()
+            adversarial_supervised = self.model.create_adversarial_supervised()
+            adversarial_emb = self.model.create_adversarial_emb()
+            synthetic_model = self.model.create_synthetic_model()
+            discriminator_model = self.model.create_discriminator_model()
 
             print("#3. Train TimeGAN")
             step_g_loss_u = step_g_loss_s = step_g_loss_v = step_e_loss_t0 = step_d_loss = 0
@@ -151,7 +107,7 @@ class Experience(ExpBase):
                 X_ = next(real_series)
                 Z_ = next(random_series)
                 step_d_loss = self.get_discriminator_loss(discriminator_model, adversarial_supervised,
-                                                    adversarial_emb, self.global_batch_size, X_, Z_)
+                                                          adversarial_emb, self.global_batch_size, X_, Z_)
 
                 if step_d_loss > 0.15:
                     step_d_loss = self.discrib_step(self.strategy, discriminator_model, adversarial_supervised,
@@ -187,7 +143,7 @@ class Experience(ExpBase):
         generated_data = np.array(np.vstack(generated_data))
 
         generated_data = (self.scale.inverse_transform(np.array(generated_data)
-                                                        .reshape(-1, self.config.seq_length))
+                                                       .reshape(-1, self.config.seq_length))
                           .reshape(-1, self.config.train["window_size"], self.config.seq_length))
 
         print("create comparison 1. plot")

@@ -200,7 +200,8 @@ class ExpBase:
                  batch_size, inps1,
                  inps2):
         per_replica_losses = strategy.run(self.train_generator, args=(
-            adversarial_supervised, adversarial_emb, synthetic, embedder, supervisor, generator, batch_size, inps1, inps2,))
+            adversarial_supervised, adversarial_emb, synthetic, embedder, supervisor, generator, batch_size, inps1,
+            inps2,))
 
         return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses,
                                axis=None)
@@ -217,8 +218,8 @@ class ExpBase:
     def discrib_step(self, strategy, discriminator, adversarial_supervised, adversarial_emb, batch_size, inps1, inps2):
         per_replica_losses = strategy.run(self.train_discriminator,
                                           args=(
-                                          discriminator, adversarial_supervised, adversarial_emb, batch_size, inps1,
-                                          inps2,
+                                              discriminator, adversarial_supervised, adversarial_emb, batch_size, inps1,
+                                              inps2,
                                           ))
 
         return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses,
@@ -228,4 +229,3 @@ class ExpBase:
     def compute_loss(loss_fn, true, pred, global_batch_size):
         per_example_loss = loss_fn(true, pred)
         return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
-
