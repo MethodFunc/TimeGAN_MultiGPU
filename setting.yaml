@@ -1,24 +1,25 @@
-multi_gpu: True
+multi_gpu: False
 gpu_num: 1
 
-path: ...
+path: /data/dg/DB_HJ03.csv
 date_col: edate
 
 preprocess:
   second: 0
   minute: 10
 
+generator:
+  blade: 42.2
+
 layers:
   type: gru
   n_layers: 4
   hidden_dim: 256
 
-
-
 train:
   window_size: 72
   batch_size: 64
-  train_step: 10000
+  train_step: 100
   gamma: 0.95
   lr: 3e-4
   beta1: 0.5
