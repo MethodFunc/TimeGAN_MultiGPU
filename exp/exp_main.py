@@ -221,7 +221,7 @@ class Experience(ExpBase):
         real_sample = np.asarray(data2)[idx]
         synthetic_sample = np.asarray(generated_data)[idx]
 
-        synthetic_sample = self.scaler.transform(synthetic_sample.reshape(-1, len(self.raw_data.columns)))
+        synthetic_sample = self.scale.transform(synthetic_sample.reshape(-1, len(self.raw_data.columns)))
 
         real_sample_2d = real_sample.reshape(-1, self.config.train["window_size"])
         synthetic_sample_2d = synthetic_sample.reshape(-1, self.config.train["window_size"])
